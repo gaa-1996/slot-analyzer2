@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="設定狙い">
+<link rel="manifest" href="manifest.json">
+<title>設定狙いアナライザー</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f7cff;
+    --accent2: #ff6b35;
+    --text: #e8eaf0;
+    --text2: #8b90a8;
+    --success: #3ddc84;
+    --warn: #ffb300;
+    --danger: #ff4444;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Hiragino Sans', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-title { font-size: 17px; font-weight: 700; }
+  .header-store { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 4px 8px;
+    gap: 4px;
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 10px;
+    border: none;
+    background: none;
+    transition: color 0.2s;
+  }
+  .nav-item.active { color: var(--accent); }
+  .nav-item svg { width: 22px; height: 22px; }
+  .page { display: none; padding: 16px; }
+  .page.active { display: block; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    width: 100%;
+  }
+  .btn:active { opacity: 0.75; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-warn { background: var(--warn); color: #000; }
+  .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; }
+  textarea, input[type="text"], input[type="date"], input[type="number"], select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    padding: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  textarea:focus, input:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  label:first-child { margin-top: 0; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-s { background: #ff4444; color: #fff; }
+  .badge-a { background: #ff8c00; color: #fff; }
+  .badge-b { background: #4f7cff; color: #fff; }
+  .badge-c { background: #3ddc84; color: #000; }
+  .badge-unknown { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .machine-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .machine-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 4px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .machine-chip.corner { border-color: var(--accent2); color: var(--accent2); }
+  .machine-chip.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .machine-chip:active { opacity: 0.7; }
+  .island-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .island-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .island-name { font-size: 15px; font-weight: 700; }
+  .island-count { font-size: 12px; color: var(--text2); }
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 20px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 500;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .section-title { font-size: 17px; font-weight: 700; }
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text2);
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; line-height: 1.7; }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 300;
+    display: none;
+    align-items: flex-end;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 20px 16px;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .stat-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-num { font-size: 26px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 11px; color: var(--text2); margin-top: 4px; }
+  .event-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .event-row:last-child { border-bottom: none; }
+  .event-date { font-size: 12px; color: var(--text2); min-width: 38px; }
+  .event-name { flex: 1; font-size: 14px; font-weight: 600; }
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  /* 候補台 */
+  .candidate-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--border);
+  }
+  .candidate-card.rank-high { border-left-color: #ff4444; }
+  .candidate-card.rank-mid { border-left-color: #ff8c00; }
+  .candidate-card.rank-ref { border-left-color: #4f7cff; }
+  .candidate-card.rank-unknown { border-left-color: var(--border); }
+  .candidate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .candidate-num { font-size: 22px; font-weight: 800; }
+  .candidate-island { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .candidate-reasons { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .confidence-label {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .conf-high { background: rgba(255,68,68,0.15); color: #ff4444; }
+  .conf-mid { background: rgba(255,140,0,0.15); color: #ff8c00; }
+  .conf-ref { background: rgba(79,124,255,0.15); color: #4f7cff; }
+  .conf-unknown { background: var(--surface2); color: var(--text2); }
+
+  /* タブ */
+  .tab-bar {
+    display: flex;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    margin-bottom: 14px;
+    gap: 3px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: none;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--surface); color: var(--text); }
+
+  /* 入場タイミング */
+  .timing-btns { display: flex; gap: 8px; margin-bottom: 14px; }
+  .timing-btn {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .timing-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(79,124,255,0.1); }
+
+  /* 実績リスト */
+  .record-row {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .record-row:last-child { border-bottom: none; }
+  .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .record-date { font-size: 12px; color: var(--text2); }
+  .result-badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .result-hit { background: rgba(61,220,132,0.15); color: var(--success); }
+  .result-miss { background: rgba(255,68,68,0.15); color: var(--danger); }
+  .result-unknown { background: var(--surface2); color: var(--text2); }
+  .record-num { font-size: 16px; font-weight: 700; }
+  .record-note { font-size: 13px; color: var(--text2); margin-top: 4px; line-height: 1.6; }
+
+  /* 機種候補 */
+  .model-candidate {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--warn);
+  }
+  .model-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .model-reason { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">設定狙いアナライザー</div>
+    <div class="header-store" id="header-store">店舗未設定</div>
+  </div>
+</div>
+
+<!-- ホーム -->
+<div class="page active" id="page-home">
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-machines">0</div>
+      <div class="stat-label">登録台数</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-islands">0</div>
+      <div class="stat-label">島数</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-events">0</div>
+      <div class="stat-label">イベント種類</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-records">0</div>
+      <div class="stat-label">実績データ</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">次のステップ</div>
+    <div id="next-steps"></div>
+  </div>
+  <div class="card" id="upcoming-events-card" style="display:none">
+    <div class="card-title">直近のイベント</div>
+    <div id="upcoming-events"></div>
+  </div>
+</div>
+
+<!-- 候補台 -->
+<div class="page" id="page-candidates">
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchCandidateTab('today')" id="ctab-today">当日分析</button>
+    <button class="tab-btn" onclick="switchCandidateTab('record')" id="ctab-record">結果記録</button>
+    <button class="tab-btn" onclick="switchCandidateTab('history')" id="ctab-history">履歴</button>
+  </div>
+
+  <!-- 当日分析タブ -->
+  <div id="ctab-content-today">
+    <div class="card">
+      <div class="card-title">対象日・イベント</div>
+      <label>日付</label>
+      <input type="date" id="candidate-date" onchange="onCandidateDateChange()">
+      <div id="date-event-info" style="margin-top:10px;font-size:14px;color:var(--text2)"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">入場タイミング</div>
+      <div class="timing-btns">
+        <div class="timing-btn active" onclick="selectTiming('early')" id="timing-early">早め<br><span style="font-size:11px;font-weight:400">1〜3台</span></div>
+        <div class="timing-btn" onclick="selectTiming('mid')" id="timing-mid">普通<br><span style="font-size:11px;font-weight:400">3〜6台</span></div>
+        <div class="timing-btn" onclick="selectTiming('late')" id="timing-late">遅め<br><span style="font-size:11px;font-weight:400">6台以上</span></div>
+      </div>
+      <button class="btn btn-primary" onclick="generateCandidates()">候補台を分析する</button>
+    </div>
+
+    <!-- 機種候補（2軸：機種ベース） -->
+    <div id="model-candidates-section" style="display:none">
+      <div class="section-header">
+        <div class="section-title">機種候補</div>
+        <span style="font-size:12px;color:var(--warn)">データ傾向より</span>
+      </div>
+      <div id="model-candidates-list"></div>
+    </div>
+
+    <!-- 台番号候補（2軸：台番号ベース） -->
+    <div id="num-candidates-section" style="display:none">
+      <div class="section-header" style="margin-top:4px">
+        <div class="section-title">候補台</div>
+        <span style="font-size:12px;color:var(--text2)" id="candidates-count"></span>
+      </div>
+      <div id="num-candidates-list"></div>
+    </div>
+
+    <!-- 仮説メモ -->
+    <div class="card" id="hypothesis-section" style="display:none">
+      <div class="card-title">今日の仮説・狙い根拠</div>
+      <textarea id="hypothesis-text" placeholder="なぜこの台・機種を狙うか、今日の考えを記録しておく"></textarea>
+      <div style="margin-top:10px">
+        <button class="btn btn-secondary" onclick="saveHypothesis()">仮説を保存</button>
+      </div>
+      <div id="saved-hypothesis" style="margin-top:10px;font-size:13px;color:var(--text2);display:none"></div>
+    </div>
+  </div>
+
+  <!-- 結果記録タブ -->
+  <div id="ctab-content-record" style="display:none">
+    <div class="card">
+      <div class="card-title">結果を記録する</div>
+
+      <label>日付</label>
+      <input type="date" id="record-date">
+
+      <label>台番号</label>
+      <input type="number" id="record-machine-num" placeholder="例：101" inputmode="numeric">
+
+      <label>機種名（自動補完）</label>
+      <input type="text" id="record-machine-name" placeholder="台番号入力で自動入力">
+
+      <label>結果</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <div class="chip" onclick="selectResult('hit')" id="result-hit">高設定濃厚◎</div>
+        <div class="chip" onclick="selectResult('miss')" id="result-miss">低設定×</div>
+        <div class="chip" onclick="selectResult('unknown')" id="result-unknown">不明</div>
+      </div>
+
+      <label>イベント名</label>
+      <input type="text" id="record-event-name" placeholder="その日のイベント名">
+
+      <label>外れた場合の理由・気づき</label>
+      <textarea id="record-miss-reason" placeholder="なぜ外れたか、何が見えたか" style="min-height:80px"></textarea>
+
+      <label>他台で見えた傾向</label>
+      <textarea id="record-other-trend" placeholder="他の台や機種の動き、店の傾向など" style="min-height:80px"></textarea>
+
+      <div style="margin-top:12px">
+        <button class="btn btn-primary" onclick="saveRecord()">記録する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 履歴タブ -->
+  <div id="ctab-content-history" style="display:none">
+    <div class="section-header">
+      <div class="section-title">実績履歴</div>
+      <select id="history-filter" onchange="renderHistory()" style="width:auto;padding:6px 10px;font-size:13px">
+        <option value="all">全件</option>
+        <option value="hit">高設定のみ</option>
+        <option value="miss">低設定のみ</option>
+      </select>
+    </div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- 台管理 -->
+<div class="page" id="page-machines">
+  <div class="section-header">
+    <div class="section-title">台マスタ</div>
+    <button class="btn btn-primary btn-sm" onclick="showImportModal()">＋ 入力</button>
+  </div>
+  <div id="machines-list">
+    <div class="empty-state">
+      <div class="icon">🎰</div>
+      <p>台データがありません<br>右上から台番号を入力してください</p>
+    </div>
+  </div>
+</div>
+
+<!-- イベント -->
+<div class="page" id="page-events">
+  <div class="section-header">
+    <div class="section-title">イベント管理</div>
+    <button class="btn btn-primary btn-sm" onclick="showEventModal()">＋ 追加</button>
+  </div>
+  <div class="card">
+    <div class="card-title">強度ランク</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="badge badge-s">S</span><span style="font-size:13px;color:var(--text2)">確実</span>
+      <span class="badge badge-a">A</span><span style="font-size:13px;color:var(--text2)">有力</span>
+      <span class="badge badge-b">B</span><span style="font-size:13px;color:var(--text2)">参考</span>
+      <span class="badge badge-c">C</span><span style="font-size:13px;color:var(--text2)">薄い</span>
+      <span class="badge badge-unknown">?</span><span style="font-size:13px;color:var(--text2)">不明</span>
+    </div>
+  </div>
+  <div id="events-list">
+    <div class="empty-state">
+      <div class="icon">📅</div>
+      <p>イベントデータがありません</p>
+    </div>
+  </div>
+</div>
+
+<!-- スケジュール -->
+<div class="page" id="page-schedule">
+  <div class="section-header">
+    <div class="section-title">月次スケジュール</div>
+    <button class="btn btn-primary btn-sm" onclick="showScheduleModal()">＋ 入力</button>
+  </div>
+  <div id="schedule-list">
+    <div class="empty-state">
+      <div class="icon">📆</div>
+      <p>スケジュールがありません<br>Pワールドの情報を入力してください</p>
+    </div>
+  </div>
+</div>
+
+<!-- 設定 -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="card-title">店舗情報</div>
+    <label>店舗名</label>
+    <input type="text" id="store-name" placeholder="グランキコーナ京都宇治店">
+    <div style="margin-top:12px">
+      <button class="btn btn-primary" onclick="saveStoreName()">保存</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">データ管理</div>
+    <button class="btn btn-secondary" style="margin-bottom:8px" onclick="exportData()">データをエクスポート</button>
+    <button class="btn btn-secondary" onclick="triggerImportData()">データをインポート</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+  <div class="card">
+    <div class="card-title">アプリについて</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.7">
+      設定狙いアナライザー v0.2<br>
+      データはすべてこのデバイスに保存されます。<br>
+      ホーム画面に追加するとアプリとして使えます。
+    </p>
+  </div>
+</div>
+
+<!-- ボトムナビ -->
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="navigate('home')" id="nav-home">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    ホーム
+  </button>
+  <button class="nav-item" onclick="navigate('candidates')" id="nav-candidates">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    候補台
+  </button>
+  <button class="nav-item" onclick="navigate('machines')" id="nav-machines">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    台管理
+  </button>
+  <button class="nav-item" onclick="navigate('events')" id="nav-events">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    イベント
+  </button>
+  <button class="nav-item" onclick="navigate('schedule')" id="nav-schedule">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    予定
+  </button>
+</nav>
+
+<!-- モーダル：台番号インポート -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">台番号を入力</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7">
+      機種名と台番号範囲を1行ずつ入力。<br>
+      例：<code style="color:var(--accent)">GOD 101-108</code>
+    </p>
+    <textarea id="import-text" placeholder="GOD 101-108&#10;番長 201-210&#10;炎炎 301-312"></textarea>
+    <div style="margin-top:4px;font-size:12px;color:var(--text2)" id="import-preview-count"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import')">キャンセル</button>
+      <button class="btn btn-primary" onclick="importMachines()">登録する</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル：イベント -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="event-modal-title">イベントを追加</div>
+    <label>イベント名</label>
+    <input type="text" id="event-name" placeholder="例：456確定、感謝祭、来店">
+    <label>強度ランク</label>
+    <select id="event-rank">
+      <option value="S">S - 確実（台数・設定が明確）</option>
+      <option value="A">A - 有力（実績あり・根拠強）</option>
+      <option value="B" selected>B - 参考（傾向あり）</option>
+      <option value="C">C - 薄い（根拠弱）</option>
+      <option value="?">? - 不明（実績なし）</option>
+    </select>
+    <label>設定の入り方の傾向</label>
+    <select id="event-tendency">
+      <option value="all">全台系（機種問わず）</option>
+      <option value="specific">特定機種優遇</option>
+      <option value="few">台数少ない機種に集中</option>
+      <option value="corner">角台優遇</option>
+      <option value="island">特定島優遇</option>
+      <option value="unknown">不明</option>
+    </select>
+    <label>メモ（根拠・傾向の詳細）</label>
+    <textarea id="event-memo" placeholder="過去の実績や傾向を記録" style="min-height:70px"></textarea>
+    <input type="hidden" id="event-edit-id">
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-event')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveEvent()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- モーダル：スケジュール -->
+<div class="modal-overlay" id="modal-schedule">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">スケジュールを入力</div>
+    <label>入力方式</label>
+    <select id="schedule-mode" onchange="toggleScheduleMode()">
+      <option value="single">1件ずつ</option>
+      <option value="bulk">一括貼り付け</option>
+    </select>
+    <div id="schedule-single">
+      <label>日付</label>
+      <input type="date" id="schedule-date">
+      <label>イベント名</label>
+      <input type="text" id="schedule-event-name" placeholder="例：456確定">
+      <label>メモ</label>
+      <input type="text" id="schedule-memo" placeholder="補足があれば">
+    </div>
+    <div id="schedule-bulk" style="display:none">
+      <label>スケジュールテキスト</label>
+      <textarea id="schedule-bulk-text" placeholder="6/15 456確定&#10;6/20 来店イベント&#10;6/28 感謝祭" style="min-height:140px"></textarea>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">「日付 イベント名」の形式で1行ずつ</div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-schedule')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveSchedule()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DB =====
+let db;
+const DB_NAME = 'SlotAnalyzer';
+const DB_VERSION = 2;
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('machines')) {
+        const ms = d.createObjectStore('machines', { keyPath: 'id', autoIncrement: true });
+        ms.createIndex('island', 'island');
+      }
+      if (!d.objectStoreNames.contains('events')) {
+        d.createObjectStore('events', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!d.objectStoreNames.contains('schedule')) {
+        const ss = d.createObjectStore('schedule', { keyPath: 'id', autoIncrement: true });
+        ss.createIndex('date', 'date');
+      }
+      if (!d.objectStoreNames.contains('settings')) {
+        d.createObjectStore('settings', { keyPath: 'key' });
+      }
+      if (!d.objectStoreNames.contains('records')) {
+        const rs = d.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
+        rs.createIndex('date', 'date');
+        rs.createIndex('machineNumber', 'machineNumber');
+      }
+      if (!d.objectStoreNames.contains('hypotheses')) {
+        const hs = d.createObjectStore('hypotheses', { keyPath: 'id', autoIncrement: true });
+        hs.createIndex('date', 'date');
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbGetAll(s) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(s, 'readonly');
+    const r = tx.objectStore(s).getAll();
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function dbAdd(s, data) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(s, 'readwrite');
+    const r = tx.objectStore(s).add(data);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function dbPut(s, data) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(s, 'readwrite');
+    const r = tx.objectStore(s).put(data);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function dbDelete(s, id) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(s, 'readwrite');
+    const r = tx.objectStore(s).delete(id);
+    r.onsuccess = () => res();
+    r.onerror = () => rej(r.error);
+  });
+}
+function dbClear(s) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(s, 'readwrite');
+    const r = tx.objectStore(s).clear();
+    r.onsuccess = () => res();
+    r.onerror = () => rej(r.error);
+  });
+}
+function dbGet(s, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(s, 'readonly');
+    const r = tx.objectStore(s).get(key);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+
+// ===== ナビ =====
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  if (page === 'home') renderHome();
+  if (page === 'candidates') initCandidatePage();
+  if (page === 'machines') renderMachines();
+  if (page === 'events') renderEvents();
+  if (page === 'schedule') renderSchedule();
+  if (page === 'settings') renderSettings();
+}
+
+// ===== トースト =====
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== モーダル =====
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+
+// ===== 台マスタ =====
+function showImportModal() {
+  document.getElementById('import-text').value = '';
+  document.getElementById('import-preview-count').textContent = '';
+  openModal('modal-import');
+}
+
+document.getElementById('import-text').addEventListener('input', function() {
+  const lines = this.value.trim().split('\n').filter(l => l.trim());
+  let count = 0;
+  lines.forEach(l => { const p = parseMachineLine(l); if (p) count += p.numbers.length; });
+  document.getElementById('import-preview-count').textContent = count > 0 ? `→ ${lines.length}機種、計${count}台` : '';
+});
+
+function parseMachineLine(line) {
+  line = line.trim();
+  if (!line) return null;
+  const m = line.match(/^(.+?)\s+(\d+)[-〜~](\d+)$/);
+  if (m) {
+    const nums = [];
+    for (let i = parseInt(m[2]); i <= parseInt(m[3]); i++) nums.push(i);
+    return { island: m[1].trim(), numbers: nums };
+  }
+  const s = line.match(/^(.+?)\s+(\d+)$/);
+  if (s) return { island: s[1].trim(), numbers: [parseInt(s[2])] };
+  return null;
+}
+
+async function importMachines() {
+  const text = document.getElementById('import-text').value.trim();
+  if (!text) { showToast('テキストを入力してください', 'error'); return; }
+  const lines = text.split('\n').filter(l => l.trim());
+  const machines = [];
+  lines.forEach(line => {
+    const p = parseMachineLine(line);
+    if (p) {
+      p.numbers.forEach((num, i) => machines.push({
+        island: p.island, number: num,
+        isCorner: i === 0 || i === p.numbers.length - 1,
+        createdAt: Date.now()
+      }));
+    }
+  });
+  if (!machines.length) { showToast('認識できる行がありません', 'error'); return; }
+  const existing = await dbGetAll('machines');
+  if (existing.length > 0 && !confirm(`既存の${existing.length}台データを上書きしますか？`)) return;
+  await dbClear('machines');
+  for (const m of machines) await dbAdd('machines', m);
+  closeModal('modal-import');
+  showToast(`${machines.length}台を登録しました`);
+  renderMachines();
+  updateStats();
+}
+
+async function renderMachines() {
+  const machines = await dbGetAll('machines');
+  const el = document.getElementById('machines-list');
+  if (!machines.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🎰</div><p>台データがありません<br>右上から台番号を入力してください</p></div>`;
+    return;
+  }
+  const islands = {};
+  machines.forEach(m => { if (!islands[m.island]) islands[m.island] = []; islands[m.island].push(m); });
+  let html = '';
+  Object.entries(islands).forEach(([island, mList]) => {
+    mList.sort((a, b) => a.number - b.number);
+    html += `<div class="island-card"><div class="island-header"><div class="island-name">${island}</div><div class="island-count">${mList.length}台</div></div><div class="machine-grid">`;
+    mList.forEach(m => { html += `<div class="machine-chip ${m.isCorner ? 'corner' : ''}">${m.number}</div>`; });
+    html += `</div></div>`;
+  });
+  html += `<div style="margin-top:8px"><button class="btn btn-danger btn-sm" onclick="clearMachines()">全データを削除</button></div>`;
+  el.innerHTML = html;
+}
+
+async function clearMachines() {
+  if (!confirm('全台データを削除しますか？')) return;
+  await dbClear('machines');
+  showToast('削除しました');
+  renderMachines();
+  updateStats();
+}
+
+// ===== イベントマスタ =====
+function showEventModal(editData = null) {
+  document.getElementById('event-modal-title').textContent = editData ? 'イベントを編集' : 'イベントを追加';
+  document.getElementById('event-name').value = editData?.name || '';
+  document.getElementById('event-rank').value = editData?.rank || 'B';
+  document.getElementById('event-tendency').value = editData?.tendency || 'unknown';
+  document.getElementById('event-memo').value = editData?.memo || '';
+  document.getElementById('event-edit-id').value = editData?.id || '';
+  openModal('modal-event');
+}
+
+async function saveEvent() {
+  const name = document.getElementById('event-name').value.trim();
+  if (!name) { showToast('イベント名を入力してください', 'error'); return; }
+  const data = {
+    name,
+    rank: document.getElementById('event-rank').value,
+    tendency: document.getElementById('event-tendency').value,
+    memo: document.getElementById('event-memo').value.trim(),
+    updatedAt: Date.now()
+  };
+  const editId = document.getElementById('event-edit-id').value;
+  if (editId) { data.id = parseInt(editId); await dbPut('events', data); }
+  else { data.createdAt = Date.now(); await dbAdd('events', data); }
+  closeModal('modal-event');
+  showToast('保存しました');
+  renderEvents();
+  updateStats();
+}
+
+async function renderEvents() {
+  const events = await dbGetAll('events');
+  const el = document.getElementById('events-list');
+  if (!events.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📅</div><p>イベントデータがありません</p></div>`;
+    return;
+  }
+  const rankOrder = { S: 0, A: 1, B: 2, C: 3, '?': 4 };
+  events.sort((a, b) => (rankOrder[a.rank] ?? 5) - (rankOrder[b.rank] ?? 5));
+  const tLabel = { all: '全台系', specific: '特定機種', few: '少台数機種集中', corner: '角台優遇', island: '特定島', unknown: '不明' };
+  let html = '';
+  events.forEach(ev => {
+    const rankKey = ev.rank === '?' ? 'unknown' : ev.rank.toLowerCase();
+    html += `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div><span class="badge badge-${rankKey}">${ev.rank}</span><span style="margin-left:8px;font-weight:700">${ev.name}</span></div>
+        <button class="btn btn-secondary btn-sm" onclick="editEvent(${ev.id})">編集</button>
+      </div>
+      <div style="font-size:13px;color:var(--text2)">傾向：${tLabel[ev.tendency] || '不明'}${ev.memo ? '<br>' + ev.memo : ''}</div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+async function editEvent(id) {
+  const events = await dbGetAll('events');
+  const ev = events.find(e => e.id === id);
+  if (ev) showEventModal(ev);
+}
+
+// ===== スケジュール =====
+function showScheduleModal() {
+  document.getElementById('schedule-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('schedule-event-name').value = '';
+  document.getElementById('schedule-memo').value = '';
+  document.getElementById('schedule-bulk-text').value = '';
+  document.getElementById('schedule-mode').value = 'single';
+  toggleScheduleMode();
+  openModal('modal-schedule');
+}
+
+function toggleScheduleMode() {
+  const mode = document.getElementById('schedule-mode').value;
+  document.getElementById('schedule-single').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('schedule-bulk').style.display = mode === 'bulk' ? 'block' : 'none';
+}
+
+async function saveSchedule() {
+  const mode = document.getElementById('schedule-mode').value;
+  const events = await dbGetAll('events');
+  if (mode === 'single') {
+    const date = document.getElementById('schedule-date').value;
+    const name = document.getElementById('schedule-event-name').value.trim();
+    if (!date || !name) { showToast('日付とイベント名を入力してください', 'error'); return; }
+    const matched = events.find(e => e.name === name);
+    await dbAdd('schedule', { date, eventName: name, eventId: matched?.id || null, memo: document.getElementById('schedule-memo').value.trim(), createdAt: Date.now() });
+    showToast('保存しました');
+  } else {
+    const lines = document.getElementById('schedule-bulk-text').value.trim().split('\n').filter(l => l.trim());
+    let count = 0;
+    const year = new Date().getFullYear();
+    for (const line of lines) {
+      const m = line.match(/^(\d+)[\/\-](\d+)\s+(.+)$/);
+      if (m) {
+        const date = `${year}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+        const name = m[3].trim();
+        const matched = events.find(e => e.name === name);
+        await dbAdd('schedule', { date, eventName: name, eventId: matched?.id || null, memo: '', createdAt: Date.now() });
+        count++;
+      }
+    }
+    if (!count) { showToast('認識できる行がありません', 'error'); return; }
+    showToast(`${count}件を保存しました`);
+  }
+  closeModal('modal-schedule');
+  renderSchedule();
+}
+
+async function renderSchedule() {
+  const schedules = await dbGetAll('schedule');
+  const events = await dbGetAll('events');
+  const el = document.getElementById('schedule-list');
+  if (!schedules.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📆</div><p>スケジュールがありません<br>Pワールドの情報を入力してください</p></div>`;
+    return;
+  }
+  schedules.sort((a, b) => a.date.localeCompare(b.date));
+  const months = {};
+  schedules.forEach(s => { const ym = s.date.substring(0, 7); if (!months[ym]) months[ym] = []; months[ym].push(s); });
+  let html = '';
+  Object.entries(months).forEach(([ym, list]) => {
+    const [y, m] = ym.split('-');
+    html += `<div class="card"><div class="card-title">${y}年${parseInt(m)}月</div>`;
+    list.forEach(s => {
+      const ev = events.find(e => e.id === s.eventId);
+      const rankKey = ev ? (ev.rank === '?' ? 'unknown' : ev.rank.toLowerCase()) : 'unknown';
+      const rank = `<span class="badge badge-${rankKey}" style="margin-right:6px">${ev?.rank || '?'}</span>`;
+      const ds = s.date.split('-');
+      html += `<div class="event-row">
+        <div class="event-date">${parseInt(ds[1])}/${parseInt(ds[2])}</div>
+        <div class="event-name">${rank}${s.eventName}</div>
+        <button class="btn btn-secondary btn-sm" onclick="deleteSchedule(${s.id})">削除</button>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  el.innerHTML = html;
+}
+
+async function deleteSchedule(id) {
+  await dbDelete('schedule', id);
+  showToast('削除しました');
+  renderSchedule();
+}
+
+// ===== ホーム =====
+async function renderHome() {
+  await updateStats();
+  const schedules = await dbGetAll('schedule');
+  const events = await dbGetAll('events');
+  const today = new Date().toISOString().split('T')[0];
+  const upcoming = schedules.filter(s => s.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+  const upCard = document.getElementById('upcoming-events-card');
+  if (upcoming.length) {
+    upCard.style.display = 'block';
+    let html = '';
+    upcoming.forEach(s => {
+      const ev = events.find(e => e.id === s.eventId);
+      const rankKey = ev ? (ev.rank === '?' ? 'unknown' : ev.rank.toLowerCase()) : 'unknown';
+      const ds = s.date.split('-');
+      html += `<div class="event-row">
+        <div class="event-date">${parseInt(ds[1])}/${parseInt(ds[2])}</div>
+        <div><span class="badge badge-${rankKey}">${ev?.rank || '?'}</span> <span style="font-weight:600;margin-left:4px">${s.eventName}</span></div>
+      </div>`;
+    });
+    document.getElementById('upcoming-events').innerHTML = html;
+  } else { upCard.style.display = 'none'; }
+
+  const machines = await dbGetAll('machines');
+  const evMaster = await dbGetAll('events');
+  const records = await dbGetAll('records');
+  let steps = '';
+  if (!machines.length) steps = `<div style="color:var(--accent);font-size:14px">① 「台管理」から台番号を入力してください</div>`;
+  else if (!evMaster.length) steps = `<div style="color:var(--accent);font-size:14px">② 「イベント」からイベントマスタを登録してください</div>`;
+  else if (!schedules.length) steps = `<div style="color:var(--accent);font-size:14px">③ 「予定」にPワールドの予定を入力してください</div>`;
+  else if (!records.length) steps = `<div style="color:var(--accent);font-size:14px">④ 「候補台」→「結果記録」から実績を入力すると分析精度が上がります</div>`;
+  else steps = `<div style="color:var(--success);font-size:14px">✓ 基本データ準備完了 — 実績 ${records.length}件蓄積中</div>`;
+  document.getElementById('next-steps').innerHTML = steps;
+}
+
+async function updateStats() {
+  const machines = await dbGetAll('machines');
+  const events = await dbGetAll('events');
+  const records = await dbGetAll('records');
+  const islands = [...new Set(machines.map(m => m.island))];
+  document.getElementById('stat-machines').textContent = machines.length;
+  document.getElementById('stat-islands').textContent = islands.length;
+  document.getElementById('stat-events').textContent = events.length;
+  document.getElementById('stat-records').textContent = records.length;
+}
+
+// ===== 候補台ページ =====
+let currentTiming = 'early';
+let currentResult = '';
+
+async function initCandidatePage() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('candidate-date').value = today;
+  document.getElementById('record-date').value = today;
+  await onCandidateDateChange();
+  switchCandidateTab('today');
+}
+
+function switchCandidateTab(tab) {
+  ['today','record','history'].forEach(t => {
+    document.getElementById('ctab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('ctab-content-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'history') renderHistory();
+}
+
+async function onCandidateDateChange() {
+  const date = document.getElementById('candidate-date').value;
+  if (!date) return;
+  const schedules = await dbGetAll('schedule');
+  const events = await dbGetAll('events');
+  const sched = schedules.find(s => s.date === date);
+  const infoEl = document.getElementById('date-event-info');
+  if (sched) {
+    const ev = events.find(e => e.id === sched.eventId);
+    const rankKey = ev ? (ev.rank === '?' ? 'unknown' : ev.rank.toLowerCase()) : 'unknown';
+    infoEl.innerHTML = `<span class="badge badge-${rankKey}">${ev?.rank || '?'}</span> <strong style="margin-left:6px">${sched.eventName}</strong>${ev?.memo ? '<br><span style="font-size:12px;color:var(--text2)">' + ev.memo + '</span>' : ''}`;
+  } else {
+    infoEl.innerHTML = `<span style="color:var(--text2)">この日のスケジュールは登録されていません</span>`;
+  }
+}
+
+function selectTiming(t) {
+  currentTiming = t;
+  ['early','mid','late'].forEach(id => {
+    document.getElementById('timing-' + id).classList.toggle('active', id === t);
+  });
+}
+
+async function generateCandidates() {
+  const date = document.getElementById('candidate-date').value;
+  if (!date) { showToast('日付を選択してください', 'error'); return; }
+
+  const [machines, records, schedules, events] = await Promise.all([
+    dbGetAll('machines'), dbGetAll('records'), dbGetAll('schedule'), dbGetAll('events')
+  ]);
+
+  if (!machines.length) { showToast('台データを先に入力してください', 'error'); return; }
+
+  const sched = schedules.find(s => s.date === date);
+  const ev = sched ? events.find(e => e.id === sched.eventId) : null;
+
+  // 台番号ごとの実績スコア計算
+  const machineScores = {};
+  machines.forEach(m => {
+    const key = m.number;
+    const machRecords = records.filter(r => r.machineNumber === m.number);
+    const hitCount = machRecords.filter(r => r.result === 'hit').length;
+    const total = machRecords.length;
+
+    // 基礎スコア
+    let score = 0;
+    let reasons = [];
+    let confidence = 'unknown';
+
+    // 1. 過去実績スコア
+    if (total > 0) {
+      const rate = hitCount / total;
+      score += rate * 40;
+      score += Math.min(total, 5) * 3; // データ数ボーナス
+      if (hitCount > 0) reasons.push(`過去${total}回中${hitCount}回高設定確認`);
+    }
+
+    // 2. 同イベント実績
+    if (sched) {
+      const sameEventRecords = records.filter(r => r.eventName === sched.eventName && r.machineNumber === m.number);
+      const sameEventHits = sameEventRecords.filter(r => r.result === 'hit').length;
+      if (sameEventRecords.length > 0) {
+        score += sameEventHits * 15;
+        reasons.push(`同イベント(${sched.eventName})で${sameEventRecords.length}回中${sameEventHits}回高設定`);
+      }
+    }
+
+    // 3. 角台ボーナス
+    if (m.isCorner) {
+      score += 8;
+      reasons.push('角台');
+    }
+
+    // 4. イベント強度
+    if (ev) {
+      const rankBonus = { S: 20, A: 15, B: 8, C: 3, '?': 0 };
+      score += rankBonus[ev.rank] || 0;
+    }
+
+    // 5. 日付末尾パターン（例：末尾3の日）
+    const dayNum = parseInt(date.split('-')[2]);
+    const dayEnd = dayNum % 10;
+    const dayEndRecords = records.filter(r => {
+      const d = parseInt(r.date?.split('-')[2] || 0);
+      return d % 10 === dayEnd && r.machineNumber === m.number && r.result === 'hit';
+    });
+    if (dayEndRecords.length > 0) {
+      score += dayEndRecords.length * 10;
+      reasons.push(`末尾${dayEnd}の日に高設定実績×${dayEndRecords.length}`);
+    }
+
+    // 信頼度判定
+    if (total === 0 && !m.isCorner) {
+      confidence = 'unknown';
+      score = Math.max(score, 1);
+    } else if (score >= 50) confidence = 'high';
+    else if (score >= 25) confidence = 'mid';
+    else if (score >= 10) confidence = 'ref';
+    else confidence = 'unknown';
+
+    if (reasons.length === 0) reasons.push('実績データなし（候補範囲拡大のため表示）');
+
+    machineScores[key] = { machine: m, score, reasons, confidence, total };
+  });
+
+  // タイミング別に候補数を決定
+  const timingCount = { early: 3, mid: 6, late: 12 };
+  const maxCount = timingCount[currentTiming];
+
+  // スコア順にソート
+  const sorted = Object.values(machineScores)
+    .sort((a, b) => b.score - a.score);
+
+  // 実績があるもの優先、ないものは参考として追加
+  const withData = sorted.filter(x => x.total > 0 || x.machine.isCorner);
+  const withoutData = sorted.filter(x => x.total === 0 && !x.machine.isCorner);
+
+  let candidates = withData.slice(0, maxCount);
+  if (candidates.length < maxCount) {
+    candidates = [...candidates, ...withoutData.slice(0, maxCount - candidates.length)];
+  }
+
+  // 機種候補（機種ベース分析）
+  const modelAnalysis = analyzeModelCandidates(records, date, sched, ev, machines);
+
+  // 表示
+  renderCandidateResults(candidates, modelAnalysis, date, sched, ev);
+}
+
+function analyzeModelCandidates(records, date, sched, ev, machines) {
+  if (!records.length) return [];
+
+  const dayNum = parseInt(date.split('-')[2]);
+  const dayEnd = dayNum % 10;
+  const modelResults = {};
+
+  // 機種ごとに集計
+  records.forEach(r => {
+    if (!r.islandName) return;
+    if (!modelResults[r.islandName]) modelResults[r.islandName] = { hits: 0, total: 0, eventHits: 0, eventTotal: 0, dayEndHits: 0 };
+    modelResults[r.islandName].total++;
+    if (r.result === 'hit') modelResults[r.islandName].hits++;
+    if (sched && r.eventName === sched.eventName) {
+      modelResults[r.islandName].eventTotal++;
+      if (r.result === 'hit') modelResults[r.islandName].eventHits++;
+    }
+    const d = parseInt(r.date?.split('-')[2] || 0);
+    if (d % 10 === dayEnd && r.result === 'hit') modelResults[r.islandName].dayEndHits++;
+  });
+
+  // 台数少ない機種を特定
+  const islandMachineCount = {};
+  machines.forEach(m => {
+    if (!islandMachineCount[m.island]) islandMachineCount[m.island] = 0;
+    islandMachineCount[m.island]++;
+  });
+
+  const candidates = [];
+  Object.entries(modelResults).forEach(([island, data]) => {
+    if (data.total < 2) return;
+    const rate = data.hits / data.total;
+    const reasons = [];
+    let priority = 0;
+
+    if (rate > 0.4) { reasons.push(`高設定出現率${Math.round(rate*100)}%（${data.total}回中${data.hits}回）`); priority += 30; }
+    if (data.eventTotal > 0 && data.eventHits > 0) { reasons.push(`同イベントで高設定確認×${data.eventHits}`); priority += 20; }
+    if (data.dayEndHits > 0) { reasons.push(`末尾${dayEnd}の日に高設定実績×${data.dayEndHits}`); priority += 15; }
+    const mc = islandMachineCount[island] || 99;
+    if (mc <= 6) { reasons.push(`台数少ない機種（${mc}台）— 集中投入パターンの可能性`); priority += 10; }
+
+    if (reasons.length > 0) candidates.push({ island, reasons, priority, machineCount: mc });
+  });
+
+  return candidates.sort((a, b) => b.priority - a.priority).slice(0, 4);
+}
+
+function renderCandidateResults(candidates, modelAnalysis, date, sched, ev) {
+  const confLabel = { high: '有力', mid: '参考有力', ref: '参考', unknown: '根拠薄' };
+  const confClass = { high: 'conf-high', mid: 'conf-mid', ref: 'conf-ref', unknown: 'conf-unknown' };
+  const rankClass = { high: 'rank-high', mid: 'rank-mid', ref: 'rank-ref', unknown: 'rank-unknown' };
+
+  // 機種候補セクション
+  const modelSec = document.getElementById('model-candidates-section');
+  const modelList = document.getElementById('model-candidates-list');
+  if (modelAnalysis.length) {
+    modelSec.style.display = 'block';
+    modelList.innerHTML = modelAnalysis.map(m =>
+      `<div class="model-candidate">
+        <div class="model-name">${m.island}（${m.machineCount}台）</div>
+        <div class="model-reason">${m.reasons.join('<br>')}</div>
+      </div>`
+    ).join('');
+  } else {
+    modelSec.style.display = 'none';
+  }
+
+  // 台番号候補セクション
+  const numSec = document.getElementById('num-candidates-section');
+  const numList = document.getElementById('num-candidates-list');
+  numSec.style.display = 'block';
+  document.getElementById('candidates-count').textContent = `${candidates.length}台`;
+
+  numList.innerHTML = candidates.map((c, idx) =>
+    `<div class="candidate-card ${rankClass[c.confidence]}">
+      <div class="candidate-header">
+        <div>
+          <div class="candidate-num">${c.machine.number}番${c.machine.isCorner ? ' <span style="font-size:13px;color:var(--accent2)">角台</span>' : ''}</div>
+          <div class="candidate-island">${c.machine.island}</div>
+        </div>
+        <span class="confidence-label ${confClass[c.confidence]}">${confLabel[c.confidence]}</span>
+      </div>
+      <div class="candidate-reasons">${c.reasons.join('<br>')}</div>
+    </div>`
+  ).join('');
+
+  // 仮説セクション表示
+  document.getElementById('hypothesis-section').style.display = 'block';
+  loadHypothesis(date);
+}
+
+async function loadHypothesis(date) {
+  const hypos = await dbGetAll('hypotheses');
+  const h = hypos.find(h => h.date === date);
+  if (h) {
+    document.getElementById('hypothesis-text').value = h.text;
+    document.getElementById('saved-hypothesis').style.display = 'block';
+    document.getElementById('saved-hypothesis').textContent = '保存済み';
+  } else {
+    document.getElementById('hypothesis-text').value = '';
+    document.getElementById('saved-hypothesis').style.display = 'none';
+  }
+}
+
+async function saveHypothesis() {
+  const date = document.getElementById('candidate-date').value;
+  const text = document.getElementById('hypothesis-text').value.trim();
+  if (!text) { showToast('内容を入力してください', 'error'); return; }
+  const hypos = await dbGetAll('hypotheses');
+  const existing = hypos.find(h => h.date === date);
+  if (existing) { await dbPut('hypotheses', { ...existing, text, updatedAt: Date.now() }); }
+  else { await dbAdd('hypotheses', { date, text, createdAt: Date.now() }); }
+  showToast('仮説を保存しました');
+  document.getElementById('saved-hypothesis').style.display = 'block';
+  document.getElementById('saved-hypothesis').textContent = '保存済み';
+}
+
+// ===== 結果記録 =====
+function selectResult(r) {
+  currentResult = r;
+  ['hit','miss','unknown'].forEach(id => {
+    document.getElementById('result-' + id).classList.toggle('selected', id === r);
+  });
+}
+
+document.getElementById('record-machine-num').addEventListener('input', async function() {
+  const num = parseInt(this.value);
+  if (!num) return;
+  const machines = await dbGetAll('machines');
+  const m = machines.find(m => m.number === num);
+  document.getElementById('record-machine-name').value = m ? m.island : '';
+});
+
+async function saveRecord() {
+  const date = document.getElementById('record-date').value;
+  const numStr = document.getElementById('record-machine-num').value;
+  const num = parseInt(numStr);
+  if (!date || !num) { showToast('日付と台番号を入力してください', 'error'); return; }
+  if (!currentResult) { showToast('結果を選択してください', 'error'); return; }
+
+  await dbAdd('records', {
+    date,
+    machineNumber: num,
+    islandName: document.getElementById('record-machine-name').value,
+    result: currentResult,
+    eventName: document.getElementById('record-event-name').value.trim(),
+    missReason: document.getElementById('record-miss-reason').value.trim(),
+    otherTrend: document.getElementById('record-other-trend').value.trim(),
+    createdAt: Date.now()
+  });
+
+  // フォームリセット
+  document.getElementById('record-machine-num').value = '';
+  document.getElementById('record-machine-name').value = '';
+  document.getElementById('record-event-name').value = '';
+  document.getElementById('record-miss-reason').value = '';
+  document.getElementById('record-other-trend').value = '';
+  currentResult = '';
+  ['hit','miss','unknown'].forEach(id => document.getElementById('result-' + id).classList.remove('selected'));
+
+  showToast('記録しました');
+  updateStats();
+}
+
+// ===== 履歴 =====
+async function renderHistory() {
+  const records = await dbGetAll('records');
+  const filter = document.getElementById('history-filter').value;
+  const el = document.getElementById('history-list');
+
+  const filtered = filter === 'all' ? records : records.filter(r => r.result === filter);
+  filtered.sort((a, b) => b.date?.localeCompare(a.date));
+
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📊</div><p>実績データがありません<br>「結果記録」タブから入力してください</p></div>`;
+    return;
+  }
+
+  const resultLabel = { hit: '高設定濃厚◎', miss: '低設定×', unknown: '不明' };
+  const resultClass = { hit: 'result-hit', miss: 'result-miss', unknown: 'result-unknown' };
+
+  el.innerHTML = filtered.map(r => {
+    const ds = r.date?.split('-') || [];
+    return `<div class="record-row">
+      <div class="record-header">
+        <div>
+          <span class="record-num">${r.machineNumber}番</span>
+          <span style="font-size:13px;color:var(--text2);margin-left:6px">${r.islandName || ''}</span>
+        </div>
+        <span class="result-badge ${resultClass[r.result]}">${resultLabel[r.result]}</span>
+      </div>
+      <div class="record-date">${ds.length >= 3 ? parseInt(ds[1]) + '/' + parseInt(ds[2]) : r.date}${r.eventName ? ' · ' + r.eventName : ''}</div>
+      ${r.missReason ? `<div class="record-note">外れ理由：${r.missReason}</div>` : ''}
+      ${r.otherTrend ? `<div class="record-note">傾向：${r.otherTrend}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ===== 設定 =====
+async function renderSettings() {
+  const s = await dbGet('settings', 'storeName');
+  document.getElementById('store-name').value = s?.value || '';
+}
+async function saveStoreName() {
+  const name = document.getElementById('store-name').value.trim();
+  await dbPut('settings', { key: 'storeName', value: name });
+  document.getElementById('header-store').textContent = name || '店舗未設定';
+  showToast('保存しました');
+}
+async function loadStoreName() {
+  const s = await dbGet('settings', 'storeName');
+  if (s?.value) document.getElementById('header-store').textContent = s.value;
+}
+
+// ===== エクスポート/インポート =====
+async function exportData() {
+  const data = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    machines: await dbGetAll('machines'),
+    events: await dbGetAll('events'),
+    schedule: await dbGetAll('schedule'),
+    records: await dbGetAll('records'),
+    hypotheses: await dbGetAll('hypotheses')
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `slot-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('エクスポートしました');
+}
+function triggerImportData() { document.getElementById('import-file').click(); }
+async function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!confirm('現在のデータを上書きしますか？')) return;
+    for (const store of ['machines','events','schedule','records','hypotheses']) {
+      if (data[store]) { await dbClear(store); for (const item of data[store]) await dbAdd(store, item); }
+    }
+    showToast('インポートしました');
+    renderHome();
+  } catch { showToast('インポートに失敗しました', 'error'); }
+  event.target.value = '';
+}
+
+// ===== 起動 =====
+async function init() {
+  await initDB();
+  await loadStoreName();
+  await renderHome();
+}
+init();
+</script>
+</body>
+</html>
